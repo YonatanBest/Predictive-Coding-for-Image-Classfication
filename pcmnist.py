@@ -39,3 +39,27 @@ class PredictiveCodingNet(nn.Module):
         self.b2 = nn.Parameter(torch.zeros(h2_dim))
         self.b3 = nn.Parameter(torch.zeros(h3_dim))
         self.b4 = nn.Parameter(torch.zeros(output_dim))
+    def forward(self, x, num_infer_steps=20, lr_state=0.2):
+        batch_size = x.size(0)
+        s1 = torch.zeros(batch_size, self.W1.shape[0], device=x.device)
+        s2 = torch.zeros(batch_size, self.W2.shape[0], device=x.device)
+        s3 = torch.zeros(batch_size, self.W3.shape[0], device=x.device)
+        s4 = torch.zeros(batch_size, self.W4.shape[0], device=x.device)
+        for _ in range(num_infer_steps):
+            pred_s1 = F.linear(x, self.W1, self.b1) + torch.matmul(s1, self.L1)
+            pred_s2 = F.linear(s1, self.W2, self.b2) + torch.matmul(s2, self.L2)
+            pred_s3 = F.linear(s2, self.W3, self.b3) + torch.matmul(s3, self.L3)
+            pred_s4 = F.linear(s3, self.W4, self.b4)
+            e1 = s1 - pred_s1
+            e2 = s2 - pred_s2
+            e3 = s3 - pred_s3
+            e4 = s4 - pred_s4
+            s1 = s1 - lr_state * e1
+            s2 = s2 - lr_state * e2
+            s3 = s3 - lr_state * e3
+            s4 = s4 - lr_state * e4
+        return s1, s2, s3, s4, e1, e2, e3, e4
+
+    def predict(self, x):
+        _, _, _, s4, _, _, _, _ = self.forward(x)
+        return s4
