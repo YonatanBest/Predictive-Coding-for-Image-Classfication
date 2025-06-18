@@ -25,26 +25,28 @@ test_loader = DataLoader(dataset=test_dataset, batch_size=1000, shuffle=False)
 class PredictiveCodingNet(nn.Module):
     def __init__(self, input_dim, h1_dim, h2_dim, h3_dim, output_dim, lateral_strength=0.1):
         super().__init__()
-       
         self.W1 = nn.Parameter(torch.randn(h1_dim, input_dim) * 0.1)
         self.W2 = nn.Parameter(torch.randn(h2_dim, h1_dim) * 0.1)
         self.W3 = nn.Parameter(torch.randn(h3_dim, h2_dim) * 0.1)
         self.W4 = nn.Parameter(torch.randn(output_dim, h3_dim) * 0.1)
-     
         self.L1 = nn.Parameter(torch.eye(h1_dim) * lateral_strength)
         self.L2 = nn.Parameter(torch.eye(h2_dim) * lateral_strength)
         self.L3 = nn.Parameter(torch.eye(h3_dim) * lateral_strength)
-    
         self.b1 = nn.Parameter(torch.zeros(h1_dim))
         self.b2 = nn.Parameter(torch.zeros(h2_dim))
         self.b3 = nn.Parameter(torch.zeros(h3_dim))
         self.b4 = nn.Parameter(torch.zeros(output_dim))
+
     def forward(self, x, num_infer_steps=20, lr_state=0.2):
         batch_size = x.size(0)
         s1 = torch.zeros(batch_size, self.W1.shape[0], device=x.device)
+        s1 = F.relu(s1)
         s2 = torch.zeros(batch_size, self.W2.shape[0], device=x.device)
+        s2 = F.relu(s2)
         s3 = torch.zeros(batch_size, self.W3.shape[0], device=x.device)
+        s3 = F.relu(s3)
         s4 = torch.zeros(batch_size, self.W4.shape[0], device=x.device)
+        s4 = F.softmax(s4)
         for _ in range(num_infer_steps):
             pred_s1 = F.linear(x, self.W1, self.b1) + torch.matmul(s1, self.L1)
             pred_s2 = F.linear(s1, self.W2, self.b2) + torch.matmul(s2, self.L2)
@@ -119,7 +121,7 @@ def test(model, test_loader, num_infer_steps=20, lr_state=0.2, verbose=True):
         for images, labels in test_loader:
             images = images.view(images.size(0), -1).to(device)
             labels = labels.to(device)
-            s1, s2, s3, s4, _, _, _, _ = model.forward(images, num_infer_steps=num_infer_steps, lr_state=lr_state)
+            s4 = model.predict(images)
             pred = s4.argmax(dim=1)
             correct += (pred == labels).sum().item()
             total += labels.size(0)
