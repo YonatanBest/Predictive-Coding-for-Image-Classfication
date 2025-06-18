@@ -7,20 +7,31 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from torchinfo import summary
 
-
+# Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+transform = transforms.ToTensor()
+
+data = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+loader = DataLoader(data)
+
+images, _ = next(iter(loader))
+
+mean = images.mean().item()
+std = images.std().item()
 
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
+    transforms.Normalize((mean,), (std,))
 ])
 
 train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
 test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(dataset=test_dataset, batch_size=1000, shuffle=False)
+test_loader = DataLoader(dataset=test_dataset, batch_size=1000)
+
+print(f"Mean: {mean}, Std: {std}")
 
 class PredictiveCodingNet(nn.Module):
     def __init__(self, input_dim, h1_dim, h2_dim, h3_dim, output_dim, lateral_strength=0.1):
@@ -46,7 +57,7 @@ class PredictiveCodingNet(nn.Module):
         s3 = torch.zeros(batch_size, self.W3.shape[0], device=x.device)
         s3 = F.relu(s3)
         s4 = torch.zeros(batch_size, self.W4.shape[0], device=x.device)
-        s4 = F.softmax(s4)
+        s4 = F.softmax(s4, dim=1)
         for _ in range(num_infer_steps):
             pred_s1 = F.linear(x, self.W1, self.b1) + torch.matmul(s1, self.L1)
             pred_s2 = F.linear(s1, self.W2, self.b2) + torch.matmul(s2, self.L2)
@@ -60,10 +71,10 @@ class PredictiveCodingNet(nn.Module):
             s2 = s2 - lr_state * e2
             s3 = s3 - lr_state * e3
             s4 = s4 - lr_state * e4
-        return s1, s2, s3, s4, e1, e2, e3, e4
+        return s1, s2, s3, s4
 
     def predict(self, x):
-        _, _, _, s4, _, _, _, _ = self.forward(x)
+        _, _, _, s4= self.forward(x)
         return s4
     
 def train(model, train_loader, test_loader=None, num_epochs=5, lr_weight=1e-3, num_infer_steps=20, lr_state=0.2):
@@ -79,7 +90,7 @@ def train(model, train_loader, test_loader=None, num_epochs=5, lr_weight=1e-3, n
         for images, labels in train_loader:
             images = images.view(images.size(0), -1).to(device)
             labels = labels.to(device)
-            s1, s2, s3, s4, e1, e2, e3, e4 = model.forward(images, num_infer_steps=num_infer_steps, lr_state=lr_state)
+            s1, s2, s3, s4 = model.forward(images, num_infer_steps=num_infer_steps, lr_state=lr_state)
             target = F.one_hot(labels, num_classes=10).float()
             output_error = s4 - target
             loss = (output_error ** 2).mean()
