@@ -56,7 +56,9 @@ This will:
 ## Files
 
 - **pcmnist.py**: Main script with model, training, and evaluation code
-- **Report for Predictive Coding for Image Classfication.pdf**: [2 page summary of theory, implementation, and results](https://drive.google.com/file/d/1n55V7dMj97DaOskTbXfUcWJMLtzLwINs/view?usp=drive_link)
+- **Report for Predictive Coding for Image Classfication without Activation Functions.pdf**: [2 page summary of theory, implementation, and results](https://drive.google.com/file/d/1n55V7dMj97DaOskTbXfUcWJMLtzLwINs/view?usp=drive_link)
+- **Report for Predictive Coding for Image Classfication with Activation Functions.pdf**: [2 page summary of theory, implementation, and results](https://drive.google.com/file/d/1nBK85VXoFmZ8QqJQg03Fr-ck2v4gW5sa/view?usp=drive_link)
+
 - **requirements.txt**: List of required Python packages
 
 ## License
