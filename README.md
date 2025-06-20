@@ -50,7 +50,7 @@ This will:
 
 ## Results
 
-- Achieves ~83–84% validation accuracy after 10 epochs
+- Achieves ~89-90% validation accuracy after 10 epochs
 - Demonstrates the effectiveness of predictive coding with lateral connections for image classification
 
 ## Files
